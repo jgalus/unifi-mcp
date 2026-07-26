@@ -1,10 +1,11 @@
 #!/bin/bash
 # Configure UniFi MCP client environment.
 # Usage:
-#   set-env.sh [--target claude|codex|openclaw] [--dry-run] KEY1=VALUE1 KEY2=VALUE2 ...
+#   set-env.sh [--target claude|codex|copilot|openclaw] [--dry-run] KEY1=VALUE1 KEY2=VALUE2 ...
 #
 # Claude target: merges environment variables into .claude/settings.local.json.
 # Codex target: registers/replaces the MCP server with `codex mcp add --env`.
+# Copilot CLI target: registers/replaces the MCP server with `copilot mcp add --env`.
 # OpenClaw target: registers/replaces the MCP server with `openclaw mcp set`.
 #
 # Bash 3.2 compatible for stock macOS.
@@ -18,7 +19,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --target)
       if [ $# -lt 2 ]; then
-        echo "ERROR: --target requires claude, codex, or openclaw" >&2
+        echo "ERROR: --target requires claude, codex, copilot, or openclaw" >&2
         exit 1
       fi
       TARGET="$2"
@@ -47,14 +48,14 @@ while [ $# -gt 0 ]; do
 done
 
 if [ $# -eq 0 ]; then
-  echo "Usage: set-env.sh [--target claude|codex|openclaw] [--dry-run] KEY1=VALUE1 KEY2=VALUE2 ..." >&2
+  echo "Usage: set-env.sh [--target claude|codex|copilot|openclaw] [--dry-run] KEY1=VALUE1 KEY2=VALUE2 ..." >&2
   exit 1
 fi
 
 case "$TARGET" in
-  claude|codex|openclaw) ;;
+  claude|codex|copilot|openclaw) ;;
   *)
-    echo "ERROR: Unsupported target '$TARGET'. Expected claude, codex, or openclaw." >&2
+    echo "ERROR: Unsupported target '$TARGET'. Expected claude, codex, copilot, or openclaw." >&2
     exit 1
     ;;
 esac
@@ -71,7 +72,7 @@ PLUGIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PLUGIN_NAME="$(basename "$PLUGIN_ROOT")"
 
 detect_package_pin() {
-  for manifest in "$PLUGIN_ROOT/.claude-plugin/plugin.json" "$PLUGIN_ROOT/.mcp.json"; do
+  for manifest in "$PLUGIN_ROOT/.claude-plugin/plugin.json" "$PLUGIN_ROOT/.codex-plugin/mcp.json"; do
     if [ -f "$manifest" ]; then
       pin=$(grep -Eo 'unifi-[a-z]+-mcp==[0-9][^"]*' "$manifest" | head -1 || true)
       if [ -n "$pin" ]; then
@@ -262,6 +263,49 @@ write_codex_config() {
   echo "Restart Codex so the updated MCP server configuration is loaded."
 }
 
+write_copilot_config() {
+  package_pin="$(detect_package_pin)"
+
+  if [ "$DRY_RUN" = "true" ]; then
+    echo "Would replace Copilot CLI MCP server '$PLUGIN_NAME' with:"
+    printf '  copilot mcp add %q' "$PLUGIN_NAME"
+    for arg in "$@"; do
+      key="${arg%%=*}"
+      value="${arg#*=}"
+      display="$(mask_value "$key" "$value")"
+      printf ' --env %q' "$key=$display"
+    done
+    printf ' -- uvx --python-preference system %q' "$package_pin"
+    echo ""
+    echo ""
+    echo "Environment values:"
+    print_values "$@"
+    return
+  fi
+
+  if ! command -v copilot >/dev/null 2>&1; then
+    echo "ERROR: copilot CLI not found on PATH. Install it with 'npm install -g @github/copilot', then re-run setup." >&2
+    exit 1
+  fi
+
+  if ! command -v uvx >/dev/null 2>&1; then
+    echo "ERROR: uvx not found on PATH. Install uv, then re-run setup." >&2
+    exit 1
+  fi
+
+  cmd=(mcp add "$PLUGIN_NAME")
+  for arg in "$@"; do
+    cmd+=(--env "$arg")
+  done
+  cmd+=(-- uvx --python-preference system "$package_pin")
+
+  copilot mcp remove "$PLUGIN_NAME" >/dev/null 2>&1 || true
+  copilot "${cmd[@]}"
+  echo ""
+  echo "Configured Copilot CLI MCP server '$PLUGIN_NAME' with $package_pin."
+  echo "Restart Copilot CLI (or run /mcp) so the updated MCP server configuration is loaded."
+}
+
 build_openclaw_json() {
   package_pin="$1"
   shift
@@ -328,5 +372,6 @@ write_openclaw_config() {
 case "$TARGET" in
   claude) write_claude_settings "$@" ;;
   codex) write_codex_config "$@" ;;
+  copilot) write_copilot_config "$@" ;;
   openclaw) write_openclaw_config "$@" ;;
 esac

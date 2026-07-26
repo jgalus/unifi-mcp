@@ -264,6 +264,30 @@ Secret-bearing response fields are redacted at egress boundaries, NOT in domain 
 
 - **Anchor:** `packages/unifi-core/src/unifi_core/redaction.py`
 
+### Client plugin targets
+
+Four client targets are supported: **Claude Code**, **Codex**, **GitHub Copilot CLI**, and **OpenClaw**. Each plugin bundle declares them separately:
+
+| Target | Manifest | MCP server source |
+| --- | --- | --- |
+| Claude Code | `plugins/<name>/.claude-plugin/plugin.json` | inline `mcpServers` |
+| Codex | `plugins/<name>/.codex-plugin/plugin.json` | `./.codex-plugin/mcp.json` |
+| Copilot CLI | `plugins/<name>/.github/plugin/plugin.json` | none — registered by `copilot mcp add` |
+| OpenClaw | `.agents/plugins/marketplace.json` | `openclaw mcp set` |
+
+Two Copilot CLI constraints drive this layout and MUST NOT be regressed:
+
+- **Copilot CLI does not expand `${VAR:-default}`.** It substitutes only a fixed set (`${PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_ROOT}`, `${PLUGIN_DATA}`, `${HOME}`, `${workspaceFolder}`) and passes everything else through literally. Servers defend against this in `unifi_core.env_placeholders` (see *Unexpanded env placeholders* below).
+- **A plugin-scoped MCP server shadows same-named user and workspace entries.** Copilot loads plugin MCP servers from `plugins/<name>/.mcp.json` **only** — `mcpServers` in the plugin manifest is ignored — and a plugin server cannot be overridden by `copilot mcp add`. The Codex server definition therefore lives at `plugins/<name>/.codex-plugin/mcp.json`, never at the plugin root. `scripts/smoke-plugin-setup.sh` asserts this.
+
+Adding a target means touching, for all three plugins: the manifest, `scripts/check-prereqs.sh`, `scripts/set-env.sh`, `scripts/check-prereqs.ps1`, `skills/<name>-setup/SKILL.md`, `.github/workflows/bump-plugin-versions.yml`, `scripts/smoke-plugin-setup.sh`, plus `README.md`, `apps/*/README.md`, and `docs/index.html`.
+
+### Unexpanded env placeholders (#Copilot CLI)
+
+Any `UNIFI_*` env var whose value is a bare `${...}` placeholder is treated as unset before config load, because a literal `${VAR}` merged into the OmegaConf tree is re-read as an interpolation and raises `UnsupportedInterpolationType` at startup. Sanitization happens in `drop_unexpanded_placeholder_env()` and runs twice: once early in each app's `bootstrap.py` (before registration-mode parsing) and once inside `load_server_config` as an idempotent safety net.
+
+- **Anchor:** `packages/unifi-core/src/unifi_core/env_placeholders.py`
+
 ### Extension Over Patching
 
 - Prefer adding new tool modules and managers over modifying existing ones

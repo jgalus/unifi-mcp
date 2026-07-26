@@ -112,6 +112,41 @@ for plugin in "${PLUGINS[@]}"; do
   assert_no_crlf "$plugin set-env.sh uses LF" "$REPO_ROOT/plugins/$plugin/scripts/set-env.sh"
 done
 
+echo ""
+echo "== 1c. Copilot CLI plugin manifests =="
+for plugin in "${PLUGINS[@]}"; do
+  copilot_manifest="$REPO_ROOT/plugins/$plugin/.github/plugin/plugin.json"
+  claude_manifest="$REPO_ROOT/plugins/$plugin/.claude-plugin/plugin.json"
+  assert_file_valid_json "$plugin Copilot manifest is valid JSON" "$copilot_manifest"
+
+  got_name=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['name'])" "$copilot_manifest" 2>/dev/null || echo "MISSING")
+  assert "$plugin Copilot manifest name matches plugin dir" "$got_name" "$plugin"
+
+  # Copilot CLI does not expand ${VAR:-default}, so the Copilot manifest must
+  # not declare an MCP server; setup registers it with `copilot mcp add`.
+  has_servers=$(python3 -c "import json,sys; print('yes' if 'mcpServers' in json.load(open(sys.argv[1])) else 'no')" "$copilot_manifest" 2>/dev/null || echo "MISSING")
+  assert "$plugin Copilot manifest declares no mcpServers" "$has_servers" "no"
+
+  copilot_version=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['version'])" "$copilot_manifest" 2>/dev/null || echo "MISSING")
+  claude_version=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['version'])" "$claude_manifest" 2>/dev/null || echo "MISSING")
+  assert "$plugin Copilot manifest version matches Claude manifest" "$copilot_version" "$claude_version"
+
+  # Copilot CLI auto-loads <pluginRoot>/.mcp.json and that plugin-scoped server
+  # shadows any same-named user-scope entry created by `copilot mcp add`, so the
+  # Codex server definition must stay inside .codex-plugin/.
+  if [ -f "$REPO_ROOT/plugins/$plugin/.mcp.json" ]; then
+    echo "  [FAIL] $plugin has a plugin-root .mcp.json (shadows Copilot user config)"
+    fails=$((fails + 1))
+    fail_messages="$fail_messages\n  - $plugin plugin-root .mcp.json must live in .codex-plugin/mcp.json"
+  else
+    echo "  [OK]   $plugin has no plugin-root .mcp.json"
+    passes=$((passes + 1))
+  fi
+  assert_file_valid_json "$plugin Codex MCP definition is valid JSON" "$REPO_ROOT/plugins/$plugin/.codex-plugin/mcp.json"
+  codex_pointer=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('mcpServers',''))" "$REPO_ROOT/plugins/$plugin/.codex-plugin/plugin.json" 2>/dev/null || echo "MISSING")
+  assert "$plugin Codex manifest points at .codex-plugin/mcp.json" "$codex_pointer" "./.codex-plugin/mcp.json"
+done
+
 # --- 2. check-prereqs.sh behavior ---
 echo ""
 echo "== 2. check-prereqs.sh =="
@@ -146,6 +181,24 @@ ec=$?
 set -e
 assert "malformed settings exits non-zero" "$ec" "1"
 assert_contains "malformed settings names the offending file" "$out" "settings.local.json"
+
+# 2d. Copilot target: missing copilot CLI fails with install guidance
+rm -rf "$work"/* 2>/dev/null || true
+cd "$work"
+set +e
+out=$(PATH="$work/empty-bin:/usr/bin:/bin" /bin/bash "$PREREQS" --target copilot "unifi-network" 2>&1)
+ec=$?
+set -e
+assert "copilot target without copilot CLI exits non-zero" "$ec" "1"
+assert_contains "copilot target names copilot mcp add" "$out" "copilot mcp add"
+
+# 2e. Unknown target is rejected
+set +e
+out=$(/bin/bash "$PREREQS" --target bogus "unifi-network" 2>&1)
+ec=$?
+set -e
+assert "unknown target exits non-zero" "$ec" "1"
+assert_contains "unknown target lists copilot as valid" "$out" "copilot"
 
 # --- 3. set-env.sh behavior ---
 echo ""
@@ -255,6 +308,58 @@ assert "openclaw JSON uses uvx command" "$got_command" "uvx"
 got_host=$(python3 -c "import json; print(json.load(open('mcp.json'))['env']['UNIFI_NETWORK_HOST'])")
 assert "openclaw JSON includes host env" "$got_host" "10.0.0.1"
 assert_not_contains "openclaw write stdout hides raw password" "$out" "hunter2secret"
+
+# 3h. Copilot CLI dry-run emits the expected registry command without leaking secrets
+rm -rf "$work" && mkdir "$work" && cd "$work"
+set +e
+out=$(/bin/bash "$SETENV" --target copilot --dry-run \
+  UNIFI_NETWORK_HOST=10.0.0.1 \
+  UNIFI_NETWORK_USERNAME=admin \
+  UNIFI_NETWORK_PASSWORD=hunter2secret 2>&1)
+ec=$?
+set -e
+assert "copilot dry-run exits 0" "$ec" "0"
+assert_contains "copilot dry-run uses mcp add" "$out" "copilot mcp add unifi-network"
+assert_contains "copilot dry-run pins the uvx command" "$out" "uvx --python-preference system"
+assert_contains "copilot dry-run masks password" "$out" "hu***et"
+assert_not_contains "copilot dry-run hides raw password" "$out" "hunter2secret"
+
+# 3i. Copilot target registers the server through the CLI
+rm -rf "$work" && mkdir -p "$work/bin" && cd "$work"
+cat > "$work/bin/uvx" <<'SH'
+#!/bin/sh
+echo "uvx 0.0.0"
+SH
+cat > "$work/bin/copilot" <<'SH'
+#!/bin/sh
+if [ "$1" = "mcp" ] && [ "$2" = "add" ]; then
+  shift 2
+  for arg in "$@"; do
+    printf '%s\n' "$arg" >> "$COPILOT_CAPTURE_ARGS"
+  done
+  exit 0
+fi
+if [ "$1" = "mcp" ] && [ "$2" = "remove" ]; then
+  exit 0
+fi
+echo "copilot 0.0.0"
+SH
+chmod +x "$work/bin/uvx" "$work/bin/copilot"
+set +e
+out=$(PATH="$work/bin:$PATH" COPILOT_CAPTURE_ARGS="$work/args.txt" /bin/bash "$SETENV" --target copilot \
+  UNIFI_NETWORK_HOST=10.0.0.1 \
+  UNIFI_NETWORK_USERNAME=admin \
+  UNIFI_NETWORK_PASSWORD=hunter2secret 2>&1)
+ec=$?
+set -e
+assert "copilot write exits 0" "$ec" "0"
+args=$(cat "$work/args.txt" 2>/dev/null || echo "")
+assert "copilot write targets plugin name" "$(head -1 "$work/args.txt" 2>/dev/null)" "unifi-network"
+assert_contains "copilot write passes host env literally" "$args" "UNIFI_NETWORK_HOST=10.0.0.1"
+assert_contains "copilot write passes password env literally" "$args" "UNIFI_NETWORK_PASSWORD=hunter2secret"
+assert_contains "copilot write passes the uvx command" "$args" "uvx"
+assert_not_contains "copilot write passes no unexpanded placeholders" "$args" '${UNIFI_'
+assert_not_contains "copilot write stdout hides raw password" "$out" "hunter2secret"
 
 # --- 4. Bash version this test ran under (informational) ---
 echo ""
