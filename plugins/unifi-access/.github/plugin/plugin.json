@@ -1,0 +1,21 @@
+{
+  "name": "unifi-access",
+  "version": "0.5.3",
+  "description": "UniFi Access MCP server — manage door locks, credentials, visitors, and access policies",
+  "author": {
+    "name": "sirkirby",
+    "url": "https://github.com/sirkirby"
+  },
+  "homepage": "https://github.com/sirkirby/unifi-mcp",
+  "repository": "https://github.com/sirkirby/unifi-mcp",
+  "license": "MIT",
+  "keywords": [
+    "unifi",
+    "access",
+    "doors",
+    "credentials",
+    "mcp"
+  ],
+  "category": "Engineering",
+  "skills": "./skills/"
+}

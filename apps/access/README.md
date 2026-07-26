@@ -39,6 +39,27 @@ codex plugin marketplace add sirkirby/unifi-mcp
 
 After installing, ask Codex to use the UniFi Access setup skill. The setup flow registers the MCP server with `codex mcp add`, stores your controller environment values in Codex's MCP configuration, and prompts you to restart Codex.
 
+### GitHub Copilot CLI
+
+Register the marketplace, then install `unifi-access`:
+
+```bash
+copilot plugin marketplace add sirkirby/unifi-mcp
+copilot plugin install unifi-access@unifi-plugins
+```
+
+After installing, ask Copilot CLI to use the UniFi Access setup skill. The setup flow registers the MCP server with `copilot mcp add` at user scope (`~/.copilot/mcp-config.json`) and prompts you to restart Copilot CLI (or run `/mcp`).
+
+To skip the setup skill and register the server directly:
+
+```bash
+copilot mcp add unifi-access \
+  --env UNIFI_ACCESS_HOST=192.168.1.1 \
+  --env UNIFI_ACCESS_USERNAME=admin \
+  --env UNIFI_ACCESS_PASSWORD=your-password \
+  -- uvx --python-preference system unifi-access-mcp@latest
+```
+
 ### PyPI / Docker
 
 ```bash

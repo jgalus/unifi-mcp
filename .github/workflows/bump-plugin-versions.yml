@@ -119,8 +119,10 @@ jobs:
 
           update_json_version "$plugin_dir/.claude-plugin/plugin.json" "$version"
           update_json_version "$plugin_dir/.codex-plugin/plugin.json" "$version"
+          # Copilot CLI manifest: skills only, no mcpServers -> no package pin to update
+          update_json_version "$plugin_dir/.github/plugin/plugin.json" "$version"
           update_mcp_package_pin "$plugin_dir/.claude-plugin/plugin.json" "$version"
-          update_mcp_package_pin "$plugin_dir/.mcp.json" "$version"
+          update_mcp_package_pin "$plugin_dir/.codex-plugin/mcp.json" "$version"
         }
 
         NETWORK_VERSION=$(get_version "network")
@@ -141,7 +143,7 @@ jobs:
         echo "  Shared:  ${SHARED_VERSION:-not tagged}"
         echo "  Relay:   ${RELAY_VERSION:-not tagged}"
 
-        # Update Claude/Codex plugin manifests and MCP package pins
+        # Update Claude/Codex/Copilot plugin manifests and MCP package pins
         update_plugin_version "plugins/unifi-network" "$NETWORK_VERSION"
         update_plugin_version "plugins/unifi-protect" "$PROTECT_VERSION"
         update_plugin_version "plugins/unifi-access" "$ACCESS_VERSION"
