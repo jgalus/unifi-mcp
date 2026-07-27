@@ -35,10 +35,10 @@ if ($Target -eq "codex") {
     if (Test-CommandExists "codex") {
         $codexVersion = (& codex --version 2>&1 | Select-Object -First 1)
         Write-Ok "codex found: $codexVersion"
-        try {
-            & codex mcp list *> $null
+        & codex mcp list *> $null
+        if ($LASTEXITCODE -eq 0) {
             Write-Ok "codex mcp list succeeded"
-        } catch {
+        } else {
             Write-Warn "codex is installed, but 'codex mcp list' failed. Setup may still work after Codex authentication is refreshed."
         }
     } else {
@@ -49,10 +49,10 @@ if ($Target -eq "codex") {
     if (Test-CommandExists "copilot") {
         $copilotVersion = (& copilot --version 2>&1 | Select-Object -First 1)
         Write-Ok "copilot found: $copilotVersion"
-        try {
-            & copilot mcp list *> $null
+        & copilot mcp list *> $null
+        if ($LASTEXITCODE -eq 0) {
             Write-Ok "copilot mcp list succeeded"
-        } catch {
+        } else {
             Write-Warn "copilot is installed, but 'copilot mcp list' failed. Setup may still work after Copilot CLI sign-in is refreshed."
         }
     } else {
