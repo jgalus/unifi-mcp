@@ -236,6 +236,7 @@
         <div class="install-card">
           <div class="install-tabs" role="tablist" aria-label="MCP installation methods">
             <button type="button" role="tab" id="tab-plugin" aria-selected="true" aria-controls="panel-plugin" data-install-tab="plugin">Claude Code</button>
+            <button type="button" role="tab" id="tab-copilot" aria-selected="false" aria-controls="panel-copilot" tabindex="-1" data-install-tab="copilot">Copilot CLI</button>
             <button type="button" role="tab" id="tab-openclaw" aria-selected="false" aria-controls="panel-openclaw" tabindex="-1" data-install-tab="openclaw">OpenClaw</button>
             <button type="button" role="tab" id="tab-uvx" aria-selected="false" aria-controls="panel-uvx" tabindex="-1" data-install-tab="uvx">uvx</button>
             <button type="button" role="tab" id="tab-docker" aria-selected="false" aria-controls="panel-docker" tabindex="-1" data-install-tab="docker">Docker</button>
@@ -251,6 +252,15 @@
 
 <span class="comment"># Run its guided setup</span>
 <span class="command">/unifi-network:unifi-network-setup</span></code></pre>
+          </div>
+          <div role="tabpanel" id="panel-copilot" aria-labelledby="tab-copilot" class="install-panel" data-install-panel="copilot" hidden>
+            <button type="button" class="copy-button" data-copy>Copy</button>
+<pre><code><span class="comment"># Add the marketplace, then install one server plugin</span>
+copilot plugin marketplace add <span class="value">sirkirby/unifi-mcp</span>
+copilot plugin install <span class="value">unifi-network@unifi-plugins</span>
+
+<span class="comment"># Use the setup skill, or register the MCP server directly</span>
+copilot mcp add <span class="value">unifi-network</span> --env <span class="value">UNIFI_NETWORK_HOST=192.168.1.1</span> -- uvx --python-preference system <span class="value">unifi-network-mcp@latest</span></code></pre>
           </div>
           <div role="tabpanel" id="panel-openclaw" aria-labelledby="tab-openclaw" class="install-panel" data-install-panel="openclaw" hidden>
             <button type="button" class="copy-button" data-copy>Copy</button>

@@ -1,0 +1,22 @@
+{
+  "name": "unifi-protect",
+  "version": "0.7.2",
+  "description": "UniFi Protect MCP server — manage security cameras, NVR, recordings, and smart detections",
+  "author": {
+    "name": "sirkirby",
+    "url": "https://github.com/sirkirby"
+  },
+  "homepage": "https://github.com/sirkirby/unifi-mcp",
+  "repository": "https://github.com/sirkirby/unifi-mcp",
+  "license": "MIT",
+  "keywords": [
+    "unifi",
+    "protect",
+    "cameras",
+    "nvr",
+    "security",
+    "mcp"
+  ],
+  "category": "Engineering",
+  "skills": "./skills/"
+}

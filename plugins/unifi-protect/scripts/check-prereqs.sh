@@ -11,7 +11,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --target)
       if [ $# -lt 2 ]; then
-        echo "ERROR: --target requires claude, codex, or openclaw" >&2
+        echo "ERROR: --target requires claude, codex, copilot, or openclaw" >&2
         exit 1
       fi
       TARGET="$2"
@@ -39,9 +39,9 @@ PLUGIN_NAME="${1:-unifi plugin}"
 SETTINGS_FILE=".claude/settings.local.json"
 
 case "$TARGET" in
-  claude|codex|openclaw) ;;
+  claude|codex|copilot|openclaw) ;;
   *)
-    echo "ERROR: Unsupported target '$TARGET'. Expected claude, codex, or openclaw." >&2
+    echo "ERROR: Unsupported target '$TARGET'. Expected claude, codex, copilot, or openclaw." >&2
     exit 1
     ;;
 esac
@@ -105,6 +105,24 @@ elif [ "$TARGET" = "codex" ]; then
     echo "         Install or open Codex, then re-run setup."
     errors=$((errors + 1))
   fi
+elif [ "$TARGET" = "copilot" ]; then
+  if command -v copilot >/dev/null 2>&1; then
+    copilot_version=$(copilot --version 2>&1 | head -1)
+    echo "  [OK]   copilot found: $copilot_version"
+    if copilot mcp list >/dev/null 2>&1; then
+      echo "  [OK]   copilot mcp list succeeded"
+    else
+      echo "  [WARN] copilot is installed, but 'copilot mcp list' failed"
+      echo "         Setup may still work, but confirm Copilot CLI is authenticated"
+      echo "         (run 'copilot' once and complete sign-in)."
+      warnings=$((warnings + 1))
+    fi
+  else
+    echo "  [FAIL] copilot CLI not found on PATH"
+    echo "         Copilot CLI setup registers the MCP server with 'copilot mcp add'."
+    echo "         Install it with 'npm install -g @github/copilot', then re-run setup."
+    errors=$((errors + 1))
+  fi
 else
   if command -v openclaw >/dev/null 2>&1; then
     openclaw_version=$(openclaw --version 2>&1 | head -1)
@@ -165,6 +183,8 @@ if [ "$TARGET" = "claude" ]; then
   echo "         After setup, run /plugin and confirm the plugin shows enabled."
 elif [ "$TARGET" = "codex" ]; then
   echo "  [INFO] After setup, restart Codex so MCP server changes are loaded."
+elif [ "$TARGET" = "copilot" ]; then
+  echo "  [INFO] After setup, restart Copilot CLI (or run /mcp) so the server is loaded."
 else
   echo "  [INFO] After setup, restart the OpenClaw Gateway so MCP server changes are loaded."
 fi

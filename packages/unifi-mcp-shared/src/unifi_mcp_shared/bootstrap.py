@@ -12,6 +12,38 @@ import os
 from pathlib import Path
 from typing import Any, Sequence
 
+from unifi_core.env_placeholders import sanitize_placeholder_env
+
+
+def drop_unexpanded_placeholder_env(*, logger: logging.Logger) -> list[str]:
+    """Ignore ``UNIFI_*`` env vars that are unexpanded shell placeholders.
+
+    Plugin manifests declare the server environment with ``${VAR:-default}``
+    interpolation. Clients that do not expand that syntax (GitHub Copilot CLI,
+    for example) pass the literal text through, which OmegaConf then fails to
+    resolve. Dropping those values lets ``config.yaml`` defaults apply and the
+    missing-credentials check produce actionable guidance instead of a crash.
+
+    Args:
+        logger: Logger used to warn about the ignored variables.
+
+    Returns:
+        The sorted names of the ignored variables (never their values).
+    """
+    ignored = sanitize_placeholder_env(os.environ)
+    if ignored:
+        logger.warning(
+            "Ignoring %d environment variable(s) left as unexpanded placeholders by the MCP client: %s",
+            len(ignored),
+            ", ".join(ignored),
+        )
+        logger.warning(
+            "This client does not expand ${VAR:-default} syntax. Configure the server with literal "
+            "values (for GitHub Copilot CLI: `copilot mcp add ... --env KEY=VALUE`), or run the "
+            "plugin's setup skill."
+        )
+    return ignored
+
 
 def load_server_config(
     *,
@@ -42,6 +74,8 @@ def load_server_config(
         An OmegaConf config object.
     """
     from omegaconf import OmegaConf
+
+    drop_unexpanded_placeholder_env(logger=logger)
 
     config_path_str: str | None = os.getenv("CONFIG_PATH")
     resolved_path: Path | None = None
@@ -152,6 +186,7 @@ def assert_credentials_configured(
     logger.error("")
     logger.error("How to set them depends on your runtime:")
     logger.error("  Claude Code plugin -> run the /setup skill")
+    logger.error("  Copilot CLI        -> `copilot mcp add %s --env %sHOST=... -- uvx ...`", plugin_name, var_prefix)
     logger.error("  Docker             -> docker-compose .env or `environment:`")
     logger.error("  Direct uvx / shell -> export them before launching")
     logger.error("")

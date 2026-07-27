@@ -230,7 +230,7 @@ done
 
 ## Procedure E: Manifest Bumper — args[2] vs args[0] Correction
 
-The manifest bumper workflow (`bump-plugin-versions.yml`) must target `args[2]` (the version pin value), not `args[0]` (the flag name). The bumper must atomically update version fields in ALL plugin manifest copies — `plugin.json`, `server.json`, `.mcp.json` — in a single commit. Verify after a release that all manifest files show the updated version string.
+The manifest bumper workflow (`bump-plugin-versions.yml`) must target `args[2]` (the version pin value), not `args[0]` (the flag name). The bumper must atomically update version fields in ALL plugin manifest copies — `plugin.json`, `server.json`, `.codex-plugin/mcp.json` — in a single commit. Verify after a release that all manifest files show the updated version string.
 
 ---
 

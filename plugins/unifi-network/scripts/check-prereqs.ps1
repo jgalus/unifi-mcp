@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("claude", "codex", "openclaw")]
+    [ValidateSet("claude", "codex", "copilot", "openclaw")]
     [string]$Target = "claude",
 
     [string]$PluginName = "unifi plugin"
@@ -45,6 +45,21 @@ if ($Target -eq "codex") {
         Write-Fail "codex CLI not found on PATH"
         Write-Host "         Codex setup registers the MCP server with 'codex mcp add'."
     }
+} elseif ($Target -eq "copilot") {
+    if (Test-CommandExists "copilot") {
+        $copilotVersion = (& copilot --version 2>&1 | Select-Object -First 1)
+        Write-Ok "copilot found: $copilotVersion"
+        try {
+            & copilot mcp list *> $null
+            Write-Ok "copilot mcp list succeeded"
+        } catch {
+            Write-Warn "copilot is installed, but 'copilot mcp list' failed. Setup may still work after Copilot CLI sign-in is refreshed."
+        }
+    } else {
+        Write-Fail "copilot CLI not found on PATH"
+        Write-Host "         Copilot CLI setup registers the MCP server with 'copilot mcp add'."
+        Write-Host "         Install it with 'npm install -g @github/copilot'."
+    }
 } elseif ($Target -eq "openclaw") {
     if (Test-CommandExists "openclaw") {
         $openclawVersion = (& openclaw --version 2>&1 | Select-Object -First 1)
@@ -69,6 +84,8 @@ if ($Target -eq "codex") {
 
 if ($Target -eq "codex") {
     Write-Host "  [INFO] After setup, restart Codex so MCP server changes are loaded."
+} elseif ($Target -eq "copilot") {
+    Write-Host "  [INFO] After setup, restart Copilot CLI (or run /mcp) so the server is loaded."
 } elseif ($Target -eq "openclaw") {
     Write-Host "  [INFO] After setup, restart the OpenClaw Gateway so MCP server changes are loaded."
 } else {
