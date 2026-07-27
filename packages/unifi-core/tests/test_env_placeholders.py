@@ -1,6 +1,7 @@
 """Tests for unexpanded shell placeholder env sanitization."""
 
 from unifi_core.env_placeholders import (
+    escape_interpolation,
     find_placeholder_env,
     is_unexpanded_placeholder,
     sanitize_placeholder_env,
@@ -24,7 +25,8 @@ class TestIsUnexpandedPlaceholder:
         assert not is_unexpanded_placeholder("192.168.1.1")
 
     def test_partial_match_is_not_a_placeholder(self):
-        # A password that merely contains the syntax must be preserved verbatim.
+        # A password that merely contains the syntax is not dropped; it is made
+        # opaque at the merge boundary instead (see escape_interpolation).
         assert not is_unexpanded_placeholder("prefix${VAR}suffix")
 
     def test_empty_string(self):
@@ -86,3 +88,11 @@ class TestSanitizePlaceholderEnv:
         found = find_placeholder_env(env)
         assert found == sorted(self._plugin_env())
         assert env == self._plugin_env()
+
+
+class TestEscapeInterpolation:
+    def test_embedded_placeholder_is_escaped(self):
+        assert escape_interpolation("pre${VAR}suf") == "pre\\${VAR}suf"
+
+    def test_plain_value_is_unchanged(self):
+        assert escape_interpolation("192.168.1.1") == "192.168.1.1"

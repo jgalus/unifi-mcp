@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import Any, Sequence
 
-from unifi_core.env_placeholders import sanitize_placeholder_env
+from unifi_core.env_placeholders import escape_interpolation, sanitize_placeholder_env
 
 
 def drop_unexpanded_placeholder_env(*, logger: logging.Logger) -> list[str]:
@@ -123,7 +123,7 @@ def load_server_config(
                 val = val.lower() in {"1", "true", "yes"}
             elif key == "controller_type":
                 val = val.lower()
-            unifi_env_overrides[key] = val
+            unifi_env_overrides[key] = escape_interpolation(val) if isinstance(val, str) else val
 
     if unifi_env_overrides:
         logger.debug("Applying env overrides to %s config: %s", env_prefix, unifi_env_overrides)
