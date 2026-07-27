@@ -87,6 +87,14 @@ assert_no_crlf() {
   fi
 }
 
+# The happy-path assertions below require a real uvx on PATH, since
+# check-prereqs.sh probes for it. Fail loudly here instead of leaking a
+# confusing "happy path exits 0" assertion failure.
+if ! command -v uvx >/dev/null 2>&1; then
+  echo "ERROR: uvx not found on PATH — install uv (https://astral.sh/uv) before running this smoke test." >&2
+  exit 1
+fi
+
 # --- 1. Scripts are byte-identical across all three plugins (drift guard) ---
 echo ""
 echo "== 1. Cross-plugin script parity =="
