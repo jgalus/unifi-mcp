@@ -4,6 +4,7 @@ This test ensures that the dynamic versioning from git tags is working correctly
 The version should be derived from git tags (e.g., v0.4.0 -> 0.4.0).
 """
 
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -41,21 +42,29 @@ class TestVersion:
         """Verify the version is derived from git tags."""
         from importlib.metadata import version
 
+        if os.environ.get("SETUPTOOLS_SCM_PRETEND_VERSION"):
+            pytest.skip("SETUPTOOLS_SCM_PRETEND_VERSION overrides the git-derived version")
+
         pkg_version = version("unifi-network-mcp")
 
         # Get git describe output, scoped to this package's tag namespace so
         # sibling-package tags on the same commit (e.g. core/, api/) don't get
         # picked up as the closest tag. Mirrors the --match pattern that
         # hatch-vcs's git_describe_command uses in pyproject.toml.
+        #
+        # Deliberately no --always: the bare-commit fallback is indistinguishable
+        # from an exact tag match (no "-" separator) and would be compared against
+        # the package version as if it were a tag. Shallow CI checkouts without
+        # tags must skip, not fail.
         result = subprocess.run(
-            ["git", "describe", "--tags", "--always", "--match", "network/v*", "--match", "v*"],
+            ["git", "describe", "--tags", "--match", "network/v*", "--match", "v*"],
             capture_output=True,
             text=True,
             cwd=Path(__file__).parent.parent.parent,
         )
 
         if result.returncode != 0:
-            pytest.skip("Git not available or no tags found")
+            pytest.skip("Git not available or no matching tags found")
 
         git_describe = result.stdout.strip()
 

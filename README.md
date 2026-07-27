@@ -94,6 +94,33 @@ Launch `codex`, run `/plugins`, open the UniFi MCP marketplace, and install `uni
 
 The setup skill registers the MCP server with `codex mcp add`, stores the selected environment values in Codex's MCP configuration, and keeps the same preview-before-confirm safety model as Claude Code.
 
+### GitHub Copilot CLI
+
+Register the UniFi MCP marketplace, then install the plugins:
+
+```bash
+copilot plugin marketplace add sirkirby/unifi-mcp
+copilot plugin install unifi-network@unifi-plugins
+```
+
+Repeat with `unifi-protect@unifi-plugins` or `unifi-access@unifi-plugins` as needed. Then launch `copilot` and ask it to run the plugin's setup skill:
+
+> Use the `unifi-network-setup` skill to configure this for Copilot CLI.
+
+The setup skill registers the MCP server with `copilot mcp add` (user scope, `~/.copilot/mcp-config.json`) and keeps the same preview-before-confirm safety model as Claude Code. Restart Copilot CLI, or run `/mcp`, to load the server.
+
+To configure the server without the setup skill:
+
+```bash
+copilot mcp add unifi-network \
+  --env UNIFI_NETWORK_HOST=192.168.1.1 \
+  --env UNIFI_NETWORK_USERNAME=admin \
+  --env UNIFI_NETWORK_PASSWORD=your-password \
+  -- uvx --python-preference system unifi-network-mcp@latest
+```
+
+> Copilot CLI does not expand `${VAR:-default}` in MCP server definitions, so the Copilot plugin manifest ships skills only and the MCP server is registered at user scope with literal values. If you installed an earlier version and the server failed to start, run `copilot plugin update` and re-run the setup skill.
+
 ### UniFi account requirements
 
 The MCP servers authenticate to the local UniFi controller APIs with a local admin/service account. Do not use a Ubiquiti SSO cloud account for MCP setup. For Network MCP today, accounts that require SSO MFA or local 2FA are not supported through configuration; use a dedicated local admin account without MFA for the service account, scoped to the permissions you are comfortable giving the MCP server.
@@ -261,9 +288,9 @@ packages/
   unifi-mcp-shared/ # Shared MCP patterns (permissions, tools, diagnostics, config)
   unifi-mcp-relay/  # Cloud relay sidecar (bridges local servers to Cloudflare Worker)
 plugins/
-  unifi-network/    # Claude Code/Codex/OpenClaw plugin: MCP server + agent skills + setup
-  unifi-protect/    # Claude Code/Codex/OpenClaw plugin: MCP server + agent skills + setup
-  unifi-access/     # Claude Code/Codex/OpenClaw plugin: MCP server + setup
+  unifi-network/    # Claude Code/Codex/Copilot CLI/OpenClaw plugin: MCP server + agent skills + setup
+  unifi-protect/    # Claude Code/Codex/Copilot CLI/OpenClaw plugin: MCP server + agent skills + setup
+  unifi-access/     # Claude Code/Codex/Copilot CLI/OpenClaw plugin: MCP server + setup
 skills/
   _shared/          # Shared utilities for skill scripts (MCP client, config)
 docs/               # Ecosystem-level documentation

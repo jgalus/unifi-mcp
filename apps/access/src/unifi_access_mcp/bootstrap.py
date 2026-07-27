@@ -23,6 +23,7 @@ from omegaconf import OmegaConf
 
 from unifi_core.config import load_yaml_config  # noqa: F401 -- re-export for convenience
 from unifi_core.config import setup_logging as _shared_setup_logging
+from unifi_mcp_shared.bootstrap import drop_unexpanded_placeholder_env as _drop_unexpanded_placeholder_env
 
 # ---------------------------------------------------------------------------
 # Environment & logging
@@ -40,6 +41,10 @@ def setup_logging(level: str | None = None) -> logging.Logger:
 
 
 logger = setup_logging()
+
+# Discard UNIFI_* values that arrived as unexpanded ${VAR:-default} placeholders
+# before anything reads them (see unifi_mcp_shared.bootstrap for the rationale).
+_drop_unexpanded_placeholder_env(logger=logger)
 
 
 # ---------------------------------------------------------------------------

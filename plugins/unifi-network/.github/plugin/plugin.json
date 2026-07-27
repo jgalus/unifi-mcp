@@ -1,0 +1,21 @@
+{
+  "name": "unifi-network",
+  "version": "0.24.1",
+  "description": "UniFi Network MCP server — manage network devices, clients, firewall, VPN, and more",
+  "author": {
+    "name": "sirkirby",
+    "url": "https://github.com/sirkirby"
+  },
+  "homepage": "https://github.com/sirkirby/unifi-mcp",
+  "repository": "https://github.com/sirkirby/unifi-mcp",
+  "license": "MIT",
+  "keywords": [
+    "unifi",
+    "network",
+    "firewall",
+    "wifi",
+    "mcp"
+  ],
+  "category": "Engineering",
+  "skills": "./skills/"
+}
