@@ -139,19 +139,23 @@ for plugin in "${PLUGINS[@]}"; do
   claude_version=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['version'])" "$claude_manifest" 2>/dev/null || echo "MISSING")
   assert "$plugin Copilot manifest version matches Claude manifest" "$copilot_version" "$claude_version"
 
-  # Copilot CLI auto-loads these paths and the resulting plugin-scoped server
-  # shadows any same-named user-scope entry created by `copilot mcp add`, so the
-  # Codex server definition must stay inside .codex-plugin/.
+  # Copilot CLI auto-loads these paths and any plugin-scoped server it finds
+  # shadows the same-named user-scope entry created by `copilot mcp add`, so the
+  # Codex server definition must stay inside .codex-plugin/. The files may exist
+  # but MUST declare zero servers: .mcp.json is also what stops Copilot falling
+  # back to the mcpServers block in .claude-plugin/plugin.json, whose
+  # ${VAR:-default} values it does not expand.
   for shadow in .mcp.json .github/mcp.json; do
-    if [ -f "$REPO_ROOT/plugins/$plugin/$shadow" ]; then
-      echo "  [FAIL] $plugin has $shadow (shadows Copilot user config)"
-      fails=$((fails + 1))
-      fail_messages="$fail_messages\n  - $plugin $shadow must live in .codex-plugin/mcp.json"
-    else
+    shadow_path="$REPO_ROOT/plugins/$plugin/$shadow"
+    if [ ! -f "$shadow_path" ]; then
       echo "  [OK]   $plugin has no $shadow"
       passes=$((passes + 1))
+      continue
     fi
+    shadow_servers=$(python3 -c "import json,sys; print('yes' if json.load(open(sys.argv[1])).get('mcpServers') else 'no')" "$shadow_path" 2>/dev/null || echo "INVALID")
+    assert "$plugin $shadow declares no mcpServers" "$shadow_servers" "no"
   done
+  assert_file_valid_json "$plugin has .mcp.json blocking the Claude manifest fallback" "$REPO_ROOT/plugins/$plugin/.mcp.json"
   assert_file_valid_json "$plugin Codex MCP definition is valid JSON" "$REPO_ROOT/plugins/$plugin/.codex-plugin/mcp.json"
   codex_pointer=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('mcpServers',''))" "$REPO_ROOT/plugins/$plugin/.codex-plugin/plugin.json" 2>/dev/null || echo "MISSING")
   assert "$plugin Codex manifest points at .codex-plugin/mcp.json" "$codex_pointer" "./.codex-plugin/mcp.json"
