@@ -16,6 +16,7 @@ from pathlib import Path
 
 import yaml
 from omegaconf import OmegaConf
+from unifi_core.env_placeholders import escape_interpolation
 from unifi_core.policy import should_redact_sensitive_fields
 
 
@@ -107,7 +108,8 @@ def _extract_env_overrides() -> dict:
         if len(path) < 2:
             continue
         section, key = path[0], "_".join(path[1:])
-        overrides.setdefault(section, {})[key] = _coerce_scalar(value)
+        coerced = _coerce_scalar(value)
+        overrides.setdefault(section, {})[key] = escape_interpolation(coerced) if isinstance(coerced, str) else coerced
     return overrides
 
 

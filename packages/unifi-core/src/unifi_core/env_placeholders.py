@@ -34,6 +34,20 @@ def is_unexpanded_placeholder(value: str) -> bool:
     return bool(_PLACEHOLDER_RE.match(value.strip()))
 
 
+def escape_interpolation(value: str) -> str:
+    """Escape ``${`` so OmegaConf stores the literal text instead of an interpolation.
+
+    Values that merely *contain* ``${`` (a legitimate password, say) survive
+    sanitization, but merging them raw into the config tree turns the embedded
+    ``${...}`` into an interpolation node that raises on first access. Escaping
+    at the merge boundary keeps the value opaque; OmegaConf yields the original
+    text on read.
+    """
+    # ponytail: a literal backslash before "${" would double-escape. Not worth
+    # a parser until an env value actually needs it.
+    return value.replace("${", "\\${")
+
+
 def find_placeholder_env(
     environ: MutableMapping[str, str],
     *,

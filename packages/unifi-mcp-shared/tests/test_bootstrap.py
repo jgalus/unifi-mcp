@@ -218,6 +218,20 @@ class TestLoadServerConfigWithPlaceholderEnv:
         with pytest.raises(UnsupportedInterpolationType):
             _ = cfg.unifi.host
 
+    def test_value_containing_a_placeholder_survives_resolution(self, monkeypatch, tmp_path):
+        """A password that merely contains ``${...}`` must read back verbatim."""
+        monkeypatch.setenv("CONFIG_PATH", str(self._config_file(tmp_path)))
+        monkeypatch.setenv("UNIFI_HOST", "10.0.0.1")
+        monkeypatch.setenv("UNIFI_PASSWORD", "pre${VAR}suf")
+
+        cfg = load_server_config(
+            package_name="unifi_mcp_shared",
+            env_prefix="NETWORK",
+            logger=logging.getLogger("test"),
+        )
+
+        assert cfg.unifi.password == "pre${VAR}suf"
+
     def test_real_values_are_used(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CONFIG_PATH", str(self._config_file(tmp_path)))
         monkeypatch.setenv("UNIFI_HOST", "10.0.0.1")
