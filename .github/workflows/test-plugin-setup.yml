@@ -4,14 +4,14 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - "plugins/*/scripts/**"
+      - "plugins/**"
       - "scripts/smoke-plugin-setup.*"
       - ".github/workflows/test-plugin-setup.yml"
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [main, develop]
     paths:
-      - "plugins/*/scripts/**"
+      - "plugins/**"
       - "scripts/smoke-plugin-setup.*"
       - ".github/workflows/test-plugin-setup.yml"
 
@@ -37,3 +37,13 @@ jobs:
       - name: Run with PowerShell 7
         shell: pwsh
         run: .\scripts\smoke-plugin-setup.ps1 -ExpectedVersionPrefix 7.
+
+  bash:
+    name: bash smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run smoke-plugin-setup.sh
+        run: /bin/bash scripts/smoke-plugin-setup.sh

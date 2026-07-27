@@ -1,5 +1,5 @@
 .PHONY: help sync build check test lint format format-check format-fix manifest generate server-manifests skill-references \
-       check-skill-references check-generated pre-commit ci core-test shared-test protocol-smoke \
+       check-skill-references check-generated pre-commit ci core-test shared-test protocol-smoke smoke-plugins \
        docs-test relay-test worker-install worker-test worker-typecheck worker-build worker-check docker-relay \
        docker-build docker-up docker-down docker-logs
 
@@ -39,7 +39,11 @@ sync: worker-install
 
 build: docker-build worker-build
 
-check: format-check lint check-generated test worker-typecheck
+check: format-check lint check-generated test worker-typecheck smoke-plugins
+
+# /bin/bash pins macOS bash 3.2 coverage
+smoke-plugins:
+	/bin/bash scripts/smoke-plugin-setup.sh
 
 core-test:
 	uv run --package unifi-core pytest packages/unifi-core/tests -v
@@ -114,7 +118,7 @@ worker-check: worker-typecheck worker-test
 docker-relay:
 	docker build -f packages/unifi-mcp-relay/Dockerfile -t unifi-mcp-relay .
 
-pre-commit: format generate lint test check-generated worker-typecheck
+pre-commit: format generate lint test check-generated worker-typecheck smoke-plugins
 
 ci: check
 
