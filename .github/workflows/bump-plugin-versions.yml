@@ -23,6 +23,9 @@ permissions:
 jobs:
   bump:
     name: Sync all version references
+    # Needs PUSH_TOKEN and pushes to main; forks have neither the secret nor a
+    # reason to rewrite version references for releases they cannot publish.
+    if: ${{ !github.event.repository.fork }}
     runs-on: ubuntu-latest
 
     steps:

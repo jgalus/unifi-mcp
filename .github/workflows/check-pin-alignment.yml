@@ -32,6 +32,10 @@ permissions:
 jobs:
   pin-alignment:
     name: "Pin alignment (PyPI install + smoke import)"
+    # Resolves declared pins against PyPI, where only the upstream repo publishes.
+    # A fork's upstream-package changes are unreleased by definition, so the gate
+    # can only fail there until upstream cuts the release.
+    if: ${{ !github.event.repository.fork }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
