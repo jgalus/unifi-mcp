@@ -131,17 +131,19 @@ for plugin in "${PLUGINS[@]}"; do
   claude_version=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['version'])" "$claude_manifest" 2>/dev/null || echo "MISSING")
   assert "$plugin Copilot manifest version matches Claude manifest" "$copilot_version" "$claude_version"
 
-  # Copilot CLI auto-loads <pluginRoot>/.mcp.json and that plugin-scoped server
+  # Copilot CLI auto-loads these paths and the resulting plugin-scoped server
   # shadows any same-named user-scope entry created by `copilot mcp add`, so the
   # Codex server definition must stay inside .codex-plugin/.
-  if [ -f "$REPO_ROOT/plugins/$plugin/.mcp.json" ]; then
-    echo "  [FAIL] $plugin has a plugin-root .mcp.json (shadows Copilot user config)"
-    fails=$((fails + 1))
-    fail_messages="$fail_messages\n  - $plugin plugin-root .mcp.json must live in .codex-plugin/mcp.json"
-  else
-    echo "  [OK]   $plugin has no plugin-root .mcp.json"
-    passes=$((passes + 1))
-  fi
+  for shadow in .mcp.json .github/mcp.json; do
+    if [ -f "$REPO_ROOT/plugins/$plugin/$shadow" ]; then
+      echo "  [FAIL] $plugin has $shadow (shadows Copilot user config)"
+      fails=$((fails + 1))
+      fail_messages="$fail_messages\n  - $plugin $shadow must live in .codex-plugin/mcp.json"
+    else
+      echo "  [OK]   $plugin has no $shadow"
+      passes=$((passes + 1))
+    fi
+  done
   assert_file_valid_json "$plugin Codex MCP definition is valid JSON" "$REPO_ROOT/plugins/$plugin/.codex-plugin/mcp.json"
   codex_pointer=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('mcpServers',''))" "$REPO_ROOT/plugins/$plugin/.codex-plugin/plugin.json" 2>/dev/null || echo "MISSING")
   assert "$plugin Codex manifest points at .codex-plugin/mcp.json" "$codex_pointer" "./.codex-plugin/mcp.json"

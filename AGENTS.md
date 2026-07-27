@@ -278,7 +278,7 @@ Four client targets are supported: **Claude Code**, **Codex**, **GitHub Copilot 
 Two Copilot CLI constraints drive this layout and MUST NOT be regressed:
 
 - **Copilot CLI does not expand `${VAR:-default}`.** It substitutes only a fixed set (`${PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_ROOT}`, `${PLUGIN_DATA}`, `${HOME}`, `${workspaceFolder}`) and passes everything else through literally. Servers defend against this in `unifi_core.env_placeholders` (see *Unexpanded env placeholders* below).
-- **A plugin-scoped MCP server shadows same-named user and workspace entries.** Copilot loads plugin MCP servers from `plugins/<name>/.mcp.json` **only** — `mcpServers` in the plugin manifest is ignored — and a plugin server cannot be overridden by `copilot mcp add`. The Codex server definition therefore lives at `plugins/<name>/.codex-plugin/mcp.json`, never at the plugin root. `scripts/smoke-plugin-setup.sh` asserts this.
+- **A plugin-scoped MCP server shadows same-named user and workspace entries.** Copilot loads plugin MCP servers from `plugins/<name>/.mcp.json` **only** — `mcpServers` in the plugin manifest is ignored — and a plugin server cannot be overridden by `copilot mcp add`. The Codex server definition therefore lives at `plugins/<name>/.codex-plugin/mcp.json`, never at the plugin root. `scripts/smoke-plugin-setup.sh` asserts this (run by `make smoke-plugins`, part of `make check` and the `Test: Plugin setup scripts` workflow).
 
 Adding a target means touching, for all three plugins: the manifest, `scripts/check-prereqs.sh`, `scripts/set-env.sh`, `scripts/check-prereqs.ps1`, `skills/<name>-setup/SKILL.md`, `.github/workflows/bump-plugin-versions.yml`, `scripts/smoke-plugin-setup.sh`, plus `README.md`, `apps/*/README.md`, and `docs/index.html`.
 
